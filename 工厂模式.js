@@ -38,6 +38,7 @@ function extend(subClass, superClass) {
     F.prototype = superClass.prototype;
     subClass.prototype = new F();
     subClass.prototype.constructor = subClass;
+    subClass.superClass=superClass.prototype;
 }
 
 var Bicyle = new Interface('Bicyle', ['assemble', 'wash', 'ride', 'repair']);
@@ -138,3 +139,57 @@ QueueHandler.prototype.advanceQueue=function(){
     var req=this.queue.shift();
     this.request(req.method,req.url,req.callback,req.postVars,true)
 }
+
+var OfflineHandler=function(){
+    this.storeRequests=[];
+};
+
+extend(OfflineHandler,SimpleHandler);
+OfflineHandler.prototype.request=function(method, url, callback, postVars){
+    if(XhrManager.isOffline()){
+        this.storeRequests.push({
+            method:method,
+            url:url,
+            callback:callback,
+            postVars:postVars
+        });
+    }else{
+        this.flushStoreRequests();
+        OfflineHandler.superClass.request(method,url,callback,postVars);
+    }
+};
+OfflineHandler.prototype.flushStoreRequests=function(){
+    for(var i=0,len=this.storeRequests.length;i<len;i++){
+        var req=this.storeRequests[i];
+        OfflineHandler.superClass.request(req.method,req.url,req.callback,req.postVars);
+    }
+}
+
+var XhrManager={
+    createXhrHandler:function(){
+        var xhr;
+        if(this.isOffline()){
+            xhr=new OfflineHandler();
+        }else if(this.isHighLatency()){
+            xhr=new QueueHandler();
+        }else{
+            xhr=new SimpleHandler();
+        }
+
+        Interface.ensureImplements(xhr,AjaxHandler);
+        return xhr;
+    },
+    isOffline:function(){
+        //编写一个方法，他会用setTimeout安排执行一些异步请求，并记录它们的往返时间。只要请求中任何一个得到回应，isOffline方法就返回false，反之亦然。
+    },
+    isHighLatency:function(){
+        //此方法会检查请求得到回应所经历的时间，并根据长短来决定该返回true还是false
+    }
+}
+
+// var myHandler=XhrManager.createXhrHandler();
+// var callback={
+//     success: function (responseText) { console.log(responseText) },
+//     failure: function (statusCode) { console.log(statusCode) }
+// };
+// myHandler.request('GET','script.php',callback)
