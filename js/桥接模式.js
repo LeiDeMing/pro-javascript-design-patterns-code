@@ -46,3 +46,25 @@ Function.prototype.method = function (name, fn) {
     return this;
 }
 
+if (!Array.prototype.forEach) {
+    Array.method('forEach', function (fn, thisObj) {
+        const scope = thisObj || window;
+        for (let x = 0, len = this.length; x < len; x++) {
+            fn.call(scope, this[i], i, this)
+        }
+    });
+}
+
+if (!Array.prototype.filter) {
+    Array.method('filter', function (fn, thisObj) {
+        const scope = thisObj || window;
+        const a = [];
+        for (let x = 0, len = this.length; x < len; x++) {
+            if (!fn.call(scope, this[i], i, this)) {
+                continue;
+            }
+            a.push(this[i]);
+        }
+        return a;
+    });
+}
